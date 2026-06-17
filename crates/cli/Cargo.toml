@@ -1,7 +1,11 @@
 [package]
 name = "cli"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
 rust-version.workspace = true
+
+[package.metadata.relase]
+tag = true
+tag-prefix = ""
 
 [dependencies]
