@@ -11,4 +11,6 @@ edition = "2024"
 tag = false
 
 [workspace.dependencies]
+compare = { path = "./crates/compare", version = "0.1.0" }
+
 image = "0.25.10"
