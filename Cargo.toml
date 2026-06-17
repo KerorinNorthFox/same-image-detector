@@ -9,3 +9,6 @@ edition = "2024"
 
 [workspace.metadata.release]
 tag = false
+
+[workspace.dependencies]
+image = "0.25.10"
