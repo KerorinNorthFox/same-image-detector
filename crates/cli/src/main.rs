@@ -4,10 +4,12 @@ use std::path::Path;
 
 fn main() {
     let matches = Command::new("same-image-detector")
-        .arg(Arg::new("base_path").help("").required(true).index(1))
-        .arg(Arg::new("target_path").help("").required(true).index(2))
+        .arg(Arg::new("base_path").help("Comparison source directory. (and target directory if target_path does not exist.)").required(true).index(1))
+        .arg(Arg::new("target_path").help("Comparison target directory.").required(false).index(2))
         .get_matches();
 
+    // 比較元ディレクトリ.
+    // 比較崎がない場合、比較元同士を比較する.
     let base_path = match matches.get_one::<String>("base_path") {
         Some(base_path_arg) => {
             dbg!(base_path_arg);
@@ -15,11 +17,14 @@ fn main() {
         }
         None => panic!(),
     };
-    let target_path = match matches.get_one::<String>("target_path") {
+    let target_path: Option<&Path> = match matches.get_one::<String>("target_path") {
         Some(target_path_arg) => {
             dbg!(target_path_arg);
-            Path::new(target_path_arg)
+            Some(Path::new(target_path_arg))
         }
-        None => panic!(),
+        None => {
+            println!("Detect in same directory.");
+            None
+        }
     };
 }
