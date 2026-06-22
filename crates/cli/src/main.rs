@@ -17,14 +17,27 @@ fn main() {
         }
         None => panic!(),
     };
-    let target_path: Option<&Path> = match matches.get_one::<String>("target_path") {
+    let target_path = match matches.get_one::<String>("target_path") {
         Some(target_path_arg) => {
             dbg!(target_path_arg);
-            Some(Path::new(target_path_arg))
+            Path::new(target_path_arg)
         }
         None => {
             println!("Detect in same directory.");
-            None
+            base_path
         }
     };
+
+    if base_path.is_file() {
+        panic!(
+            "base_path {} is file. Use direcotry path.",
+            base_path.display()
+        );
+    }
+    if target_path.is_file() {
+        panic!(
+            "target_path {} is file. Use direcotry path.",
+            target_path.display()
+        );
+    }
 }
