@@ -1,6 +1,27 @@
 use clap::{Arg, Command};
-use std::path::Path;
-// use compare;
+use std::fs;
+use std::path::{Path, PathBuf};
+
+// ディレクトリから画像ファイルを抽出
+fn get_img_paths(dir: fs::ReadDir) -> Vec<PathBuf> {
+    dir.filter_map(|entry| entry.ok()) // エラーのないファイルだけ
+        .map(|entry| entry.path())
+        .filter(|path| path.is_file() && does_contains_img_ext(path)) // 画像ファイルだけを抽出
+        .collect()
+}
+
+// 画像の拡張子がファイルパスに含まれているか
+fn does_contains_img_ext(path: &PathBuf) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| {
+            matches!(
+                ext.to_ascii_lowercase().as_str(),
+                "jpg" | "jpeg" | "png" | "webp"
+            )
+        })
+        .unwrap_or(false)
+}
 
 fn main() {
     let matches = Command::new("same-image-detector")
@@ -39,5 +60,15 @@ fn main() {
             "target_path {} is file. Use direcotry path.",
             target_path.display()
         );
+    }
+
+    let base_dir = fs::read_dir(base_path).unwrap();
+    let target_dir = fs::read_dir(target_path).unwrap();
+    let base_img_paths = get_img_paths(base_dir);
+    let target_img_paths = get_img_paths(target_dir);
+
+    for base_file_path in base_img_paths.iter() {
+        for target_file_path in target_img_paths.iter() {
+        }
     }
 }
