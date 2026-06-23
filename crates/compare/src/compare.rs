@@ -3,7 +3,7 @@ use image::{DynamicImage, GenericImageView, ImageError, ImageReader};
 
 const RGB_CHANNELS: u32 = 3;
 
-pub fn load_image(path: &str) -> Result<DynamicImage, ImageError> {
+pub fn load_image(path: &std::path::PathBuf) -> Result<DynamicImage, ImageError> {
     ImageReader::open(path)?.decode()
 }
 
