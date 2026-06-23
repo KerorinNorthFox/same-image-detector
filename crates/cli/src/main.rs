@@ -1,4 +1,5 @@
 use clap::{Arg, Command};
+use compare;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -68,7 +69,17 @@ fn main() {
     let target_img_paths = get_img_paths(target_dir);
 
     for base_file_path in base_img_paths.iter() {
+        dbg!(base_file_path);
+        let base_img = compare::load_image(&base_file_path).unwrap();
+        let base_vec = compare::get_image_vec(&base_img, None, None);
+
         for target_file_path in target_img_paths.iter() {
+            dbg!(target_file_path);
+            let target_img = compare::load_image(&target_file_path).unwrap();
+            let target_vec = compare::get_image_vec(&target_img, None, None);
+
+            let result = compare::calc_cosine_similarity(&base_vec, &target_vec);
+            dbg!(result);
         }
     }
 }
