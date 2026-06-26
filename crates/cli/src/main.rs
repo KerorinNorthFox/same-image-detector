@@ -3,6 +3,11 @@ use compare;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+struct ImageFeature {
+    path: PathBuf,
+    vec: Vec<f32>,
+}
+
 // ディレクトリから画像ファイルを抽出
 fn get_img_paths(dir: fs::ReadDir) -> Vec<PathBuf> {
     dir.filter_map(|entry| entry.ok()) // エラーのないファイルだけ
@@ -68,27 +73,37 @@ fn main() {
     let base_img_paths = get_img_paths(base_dir);
     let target_img_paths = get_img_paths(target_dir);
 
-    let base_vecs: Vec<_> = base_img_paths
+    let base_features: Vec<_> = base_img_paths
         .iter()
         .map(|path| {
             dbg!(path);
             let img = compare::load_image(path).unwrap();
-            compare::get_image_vec(&img, None, None)
+            let vec = compare::get_image_vec(&img, None, None);
+            ImageFeature {
+                path: path.clone(),
+                vec: vec,
+            }
         })
         .collect();
-    let target_vecs: Vec<_> = target_img_paths
+    let target_features: Vec<_> = target_img_paths
         .iter()
         .map(|path| {
             dbg!(path);
             let img = compare::load_image(path).unwrap();
-            compare::get_image_vec(&img, None, None)
+            let vec = compare::get_image_vec(&img, None, None);
+            ImageFeature {
+                path: path.clone(),
+                vec: vec,
+            }
         })
         .collect();
     dbg!("Image conversion is completed.");
 
-    for base_vec in &base_vecs {
-        for target_vec in &target_vecs {
-            let result = compare::calc_cosine_similarity(&base_vec, &target_vec);
+    for base_feat in &base_features {
+        dbg!(&base_feat.path);
+        for target_feat in &target_features {
+            dbg!(&base_feat.path);
+            let result = compare::calc_cosine_similarity(&base_feat.vec, &target_feat.vec);
             dbg!(result);
         }
     }
