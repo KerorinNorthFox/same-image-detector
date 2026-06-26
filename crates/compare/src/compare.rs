@@ -10,7 +10,7 @@ pub fn load_image(path: &std::path::PathBuf) -> Result<DynamicImage, ImageError>
 pub fn get_image_vec(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Vec<f32> {
     let width = width.unwrap_or(256);
     let height = height.unwrap_or(256);
-    let resized = img.resize(width, height, FilterType::Triangle);
+    let resized = img.resize(width, height, FilterType::Nearest);
 
     let mut vec = Vec::with_capacity((width * height * RGB_CHANNELS) as usize);
 
