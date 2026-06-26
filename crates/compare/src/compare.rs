@@ -14,10 +14,10 @@ pub fn get_image_vec(img: &DynamicImage, width: Option<u32>, height: Option<u32>
     let rgb = resized.to_rgb8();
     let raw = rgb.as_raw();
 
-    let mut vec = Vec::with_capacity(raw.len());
+    let mut vec = vec![0.0; raw.len()];
 
-    for &v in raw {
-        vec.push(v as f32 * NORMALIZED);
+    for (dst, src) in vec.iter_mut().zip(raw) {
+        *dst = *src as f32 * NORMALIZED;
     }
     vec
 }
