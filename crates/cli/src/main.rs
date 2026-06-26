@@ -68,16 +68,26 @@ fn main() {
     let base_img_paths = get_img_paths(base_dir);
     let target_img_paths = get_img_paths(target_dir);
 
-    for base_file_path in base_img_paths.iter() {
-        dbg!(base_file_path);
-        let base_img = compare::load_image(&base_file_path).unwrap();
-        let base_vec = compare::get_image_vec(&base_img, None, None);
+    let base_vecs: Vec<_> = base_img_paths
+        .iter()
+        .map(|path| {
+            dbg!(path);
+            let img = compare::load_image(path).unwrap();
+            compare::get_image_vec(&img, None, None)
+        })
+        .collect();
+    let target_vecs: Vec<_> = target_img_paths
+        .iter()
+        .map(|path| {
+            dbg!(path);
+            let img = compare::load_image(path).unwrap();
+            compare::get_image_vec(&img, None, None)
+        })
+        .collect();
+    dbg!("Image conversion is completed.");
 
-        for target_file_path in target_img_paths.iter() {
-            dbg!(target_file_path);
-            let target_img = compare::load_image(&target_file_path).unwrap();
-            let target_vec = compare::get_image_vec(&target_img, None, None);
-
+    for base_vec in &base_vecs {
+        for target_vec in &target_vecs {
             let result = compare::calc_cosine_similarity(&base_vec, &target_vec);
             dbg!(result);
         }
