@@ -41,5 +41,5 @@ pub fn calc_cosine_similarity(v1: &[f32], v2: &[f32]) -> Option<f32> {
         return None;
     }
 
-    Some(dot_product / (norm_v1 * norm_v2))
+    Some(dot_product / (norm_v1.sqrt() * norm_v2.sqrt()))
 }
