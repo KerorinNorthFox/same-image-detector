@@ -1,7 +1,7 @@
 use image::imageops::FilterType;
-use image::{DynamicImage, GenericImageView, ImageError, ImageReader};
+use image::{DynamicImage, ImageError, ImageReader};
 
-const RGB_CHANNELS: u32 = 3;
+const NORMALIZED: f32 = 1.0 / 255.0;
 
 pub fn load_image(path: &std::path::PathBuf) -> Result<DynamicImage, ImageError> {
     ImageReader::open(path)?.decode()
@@ -11,13 +11,13 @@ pub fn get_image_vec(img: &DynamicImage, width: Option<u32>, height: Option<u32>
     let width = width.unwrap_or(256);
     let height = height.unwrap_or(256);
     let resized = img.resize(width, height, FilterType::Nearest);
+    let rgb = resized.to_rgb8();
+    let raw = rgb.as_raw();
 
-    let mut vec = Vec::with_capacity((width * height * RGB_CHANNELS) as usize);
+    let mut vec = Vec::with_capacity(raw.len());
 
-    for (_, _, pixel) in resized.pixels() {
-        vec.push(pixel[0] as f32 / 255.0);
-        vec.push(pixel[1] as f32 / 255.0);
-        vec.push(pixel[2] as f32 / 255.0);
+    for &v in raw {
+        vec.push(v as f32 * NORMALIZED);
     }
     vec
 }
