@@ -14,3 +14,4 @@ tag = false
 compare = { path = "./crates/compare", version = "0.1.0" }
 
 image = "0.25.10"
+rayon = "1.12.0"
