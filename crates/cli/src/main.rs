@@ -1,5 +1,6 @@
 use clap::{Arg, Command};
 use compare;
+use rayon::prelude::*;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -74,7 +75,7 @@ fn main() {
     let target_img_paths = get_img_paths(target_dir);
 
     let base_features: Vec<_> = base_img_paths
-        .iter()
+        .par_iter()
         .map(|path| {
             dbg!(path);
             let img = compare::load_image(path).unwrap();
@@ -86,7 +87,7 @@ fn main() {
         })
         .collect();
     let target_features: Vec<_> = target_img_paths
-        .iter()
+        .par_iter()
         .map(|path| {
             dbg!(path);
             let img = compare::load_image(path).unwrap();
@@ -102,7 +103,7 @@ fn main() {
     for base_feat in &base_features {
         dbg!(&base_feat.path);
         for target_feat in &target_features {
-            dbg!(&base_feat.path);
+            dbg!(&target_feat.path);
             let result = compare::calc_cosine_similarity(&base_feat.vec, &target_feat.vec);
             dbg!(result);
         }
