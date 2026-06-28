@@ -10,7 +10,7 @@ pub fn load_image(path: &std::path::PathBuf) -> Result<DynamicImage, ImageError>
 pub fn get_image_vec(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Vec<f32> {
     let width = width.unwrap_or(256);
     let height = height.unwrap_or(256);
-    let resized = img.resize(width, height, FilterType::Nearest);
+    let resized = img.resize_exact(width, height, FilterType::Nearest);
     let rgb = resized.to_rgb8();
     let raw = rgb.as_raw();
 
@@ -24,6 +24,7 @@ pub fn get_image_vec(img: &DynamicImage, width: Option<u32>, height: Option<u32>
 
 pub fn calc_cosine_similarity(v1: &[f32], v2: &[f32]) -> Option<f32> {
     if v1.len() != v2.len() || v1.is_empty() || v2.is_empty() {
+        dbg!("v1 or v2 is empty");
         return None;
     }
 
@@ -38,6 +39,8 @@ pub fn calc_cosine_similarity(v1: &[f32], v2: &[f32]) -> Option<f32> {
     }
 
     if norm_v1 == 0.0 || norm_v2 == 0.0 {
+        dbg!(norm_v1);
+        dbg!(norm_v2);
         return None;
     }
 
