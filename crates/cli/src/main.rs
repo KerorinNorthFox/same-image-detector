@@ -2,7 +2,10 @@ use clap::{Arg, Command};
 use compare;
 use rayon::prelude::*;
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
+
+const THRESHOULD: f32 = 0.95;
 
 struct ImageFeature {
     path: PathBuf,
@@ -28,6 +31,15 @@ fn does_contains_img_ext(path: &PathBuf) -> bool {
             )
         })
         .unwrap_or(false)
+}
+
+fn move_file(from: &Path, to: &Path) -> io::Result<()> {
+    if let Some(parent) = to.parent() {
+        fs::create_dir(parent)?;
+    }
+
+    fs::rename(&from, &to)?;
+    Ok(())
 }
 
 fn main() {
@@ -106,6 +118,47 @@ fn main() {
             dbg!(&target_feat.path);
             let result = compare::calc_cosine_similarity(&base_feat.vec, &target_feat.vec);
             dbg!(result);
+
+            if let Some(sim) = result
+                && sim > THRESHOULD
+            {
+                let base_parent = base_feat.path.parent().unwrap();
+                let save_dir = base_parent.join("#duplicated");
+                let base_path = &base_feat.path;
+                let target_path = &target_feat.path;
+
+                if !save_dir.exists() {
+                    fs::create_dir(&save_dir).unwrap();
+                }
+
+                let base_dupl_path = save_dir.join(base_path.file_name().unwrap());
+                let target_dupl_path = save_dir.join(target_path.file_name().unwrap());
+
+                match move_file(&base_path, &base_dupl_path) {
+                    Err(_) => {
+                        dbg!(base_dupl_path);
+                        continue;
+                    }
+                    Ok(_) => {
+                        println!(
+                            "Move {} is completed successfully.",
+                            base_path.to_str().unwrap()
+                        );
+                    }
+                }
+                match move_file(&target_path, &target_dupl_path) {
+                    Err(_) => {
+                        dbg!(target_dupl_path);
+                        continue;
+                    }
+                    Ok(_) => {
+                        println!(
+                            "Move {} is completed successfully.",
+                            target_path.to_str().unwrap()
+                        );
+                    }
+                }
+            }
         }
     }
 }
