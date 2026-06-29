@@ -33,9 +33,16 @@ fn does_contains_img_ext(path: &PathBuf) -> bool {
         .unwrap_or(false)
 }
 
+// ファイルを移動する.
+// 移動先のディレクトリが存在しない場合、ネストを含め全てのディレクトリを作成する.
+// from: 移動元ファイル(ファイル名を含める).
+// to  : 移動先ファイル(ファイル名を含める).
 fn move_file(from: &Path, to: &Path) -> io::Result<()> {
-    if let Some(parent) = to.parent() {
-        fs::create_dir(parent)?;
+    let parent = to.parent().unwrap();
+    if !parent.exists() {
+        dbg!(parent);
+        fs::create_dir_all(parent)?;
+        println!("create dir '{}' successfully.", parent.to_str().unwrap());
     }
 
     fs::rename(&from, &to)?;
@@ -86,6 +93,7 @@ fn main() {
     let base_img_paths = get_img_paths(base_dir);
     let target_img_paths = get_img_paths(target_dir);
 
+    // 画像を全てベクトルに変換する.
     let base_features: Vec<_> = base_img_paths
         .par_iter()
         .map(|path| {
@@ -112,39 +120,33 @@ fn main() {
         .collect();
     dbg!("Image conversion is completed.");
 
+    // 重複画像の移動先は '比較元ディレクトリ/#duplicated' にする.
     let save_dir_path = base_path.join("#duplicated");
 
     for base_feat in &base_features {
         let base_img_path = &base_feat.path;
+        // 重複画像を分けるために比較元画像ファイル名でディレクトリを分ける.
         let save_unique_dir = save_dir_path.join(base_img_path.file_stem().unwrap());
         dbg!(&base_img_path);
 
         for target_feat in &target_features {
             let target_img_path = &target_feat.path;
             dbg!(&target_img_path);
+
             let result = compare::calc_cosine_similarity(&base_feat.vec, &target_feat.vec);
             dbg!(result);
 
             if let Some(sim) = result
                 && sim > THRESHOULD
             {
+                // 移動先画像パス.
                 let base_dupl_path = save_unique_dir.join(base_img_path.file_name().unwrap());
                 let target_dupl_path = save_unique_dir.join(target_img_path.file_name().unwrap());
 
-                match move_file(&base_img_path, &base_dupl_path) {
-                    Err(_) => {
-                        dbg!(base_dupl_path);
-                        continue;
-                    }
-                    Ok(_) => {
-                        println!(
-                            "Move {} is completed successfully.",
-                            base_img_path.to_str().unwrap()
-                        );
-                    }
-                }
                 match move_file(&target_img_path, &target_dupl_path) {
-                    Err(_) => {
+                    Err(e) => {
+                        dbg!(e);
+                        dbg!(target_img_path);
                         dbg!(target_dupl_path);
                         continue;
                     }
@@ -153,6 +155,21 @@ fn main() {
                             "Move {} is completed successfully.",
                             target_img_path.to_str().unwrap()
                         );
+                    }
+                }
+                match move_file(&base_img_path, &base_dupl_path) {
+                    Err(e) => {
+                        dbg!(e);
+                        dbg!(base_img_path);
+                        dbg!(base_dupl_path);
+                        continue;
+                    }
+                    Ok(_) => {
+                        println!(
+                            "Move {} is completed successfully.",
+                            base_img_path.to_str().unwrap()
+                        );
+                        break; // 比較元画像がmoveされたら次の比較元画像にbreak.
                     }
                 }
             }
