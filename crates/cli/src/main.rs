@@ -112,29 +112,26 @@ fn main() {
         .collect();
     dbg!("Image conversion is completed.");
 
+    let save_dir_path = base_path.join("#duplicated");
+
     for base_feat in &base_features {
-        dbg!(&base_feat.path);
+        let base_img_path = &base_feat.path;
+        let save_unique_dir = save_dir_path.join(base_img_path.file_stem().unwrap());
+        dbg!(&base_img_path);
+
         for target_feat in &target_features {
-            dbg!(&target_feat.path);
+            let target_img_path = &target_feat.path;
+            dbg!(&target_img_path);
             let result = compare::calc_cosine_similarity(&base_feat.vec, &target_feat.vec);
             dbg!(result);
 
             if let Some(sim) = result
                 && sim > THRESHOULD
             {
-                let base_parent = base_feat.path.parent().unwrap();
-                let save_dir = base_parent.join("#duplicated");
-                let base_path = &base_feat.path;
-                let target_path = &target_feat.path;
+                let base_dupl_path = save_unique_dir.join(base_img_path.file_name().unwrap());
+                let target_dupl_path = save_unique_dir.join(target_img_path.file_name().unwrap());
 
-                if !save_dir.exists() {
-                    fs::create_dir(&save_dir).unwrap();
-                }
-
-                let base_dupl_path = save_dir.join(base_path.file_name().unwrap());
-                let target_dupl_path = save_dir.join(target_path.file_name().unwrap());
-
-                match move_file(&base_path, &base_dupl_path) {
+                match move_file(&base_img_path, &base_dupl_path) {
                     Err(_) => {
                         dbg!(base_dupl_path);
                         continue;
@@ -142,11 +139,11 @@ fn main() {
                     Ok(_) => {
                         println!(
                             "Move {} is completed successfully.",
-                            base_path.to_str().unwrap()
+                            base_img_path.to_str().unwrap()
                         );
                     }
                 }
-                match move_file(&target_path, &target_dupl_path) {
+                match move_file(&target_img_path, &target_dupl_path) {
                     Err(_) => {
                         dbg!(target_dupl_path);
                         continue;
@@ -154,7 +151,7 @@ fn main() {
                     Ok(_) => {
                         println!(
                             "Move {} is completed successfully.",
-                            target_path.to_str().unwrap()
+                            target_img_path.to_str().unwrap()
                         );
                     }
                 }
