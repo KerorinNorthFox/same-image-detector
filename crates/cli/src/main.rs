@@ -40,7 +40,6 @@ fn does_contains_img_ext(path: &PathBuf) -> bool {
 fn move_file(from: &Path, to: &Path) -> io::Result<()> {
     let parent = to.parent().unwrap();
     if !parent.exists() {
-        dbg!(parent);
         fs::create_dir_all(parent)?;
         println!("create dir '{}' successfully.", parent.to_str().unwrap());
     }
@@ -143,11 +142,9 @@ fn main() {
                 let base_dupl_path = save_unique_dir.join(base_img_path.file_name().unwrap());
                 let target_dupl_path = save_unique_dir.join(target_img_path.file_name().unwrap());
 
-                match move_file(&target_img_path, &target_dupl_path) {
+                match move_file(dbg!(&target_img_path), dbg!(&target_dupl_path)) {
                     Err(e) => {
                         dbg!(e);
-                        dbg!(target_img_path);
-                        dbg!(target_dupl_path);
                         continue;
                     }
                     Ok(_) => {
@@ -157,11 +154,9 @@ fn main() {
                         );
                     }
                 }
-                match move_file(&base_img_path, &base_dupl_path) {
+                match move_file(dbg!(&base_img_path), dbg!(&base_dupl_path)) {
                     Err(e) => {
                         dbg!(e);
-                        dbg!(base_img_path);
-                        dbg!(base_dupl_path);
                         continue;
                     }
                     Ok(_) => {
