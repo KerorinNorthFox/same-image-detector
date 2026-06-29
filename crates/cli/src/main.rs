@@ -169,7 +169,6 @@ fn main() {
                             "Move {} is completed successfully.",
                             base_img_path.to_str().unwrap()
                         );
-                        break; // 比較元画像がmoveされたら次の比較元画像にbreak.
                     }
                 }
             }
