@@ -1,10 +1,11 @@
 use image::imageops::FilterType;
 use image::{DynamicImage, ImageError, ImageReader};
+use std::path::Path;
 
 const NORMALIZED: f32 = 1.0 / 255.0;
 
-pub fn load_image(path: &std::path::PathBuf) -> Result<DynamicImage, ImageError> {
-    ImageReader::open(path)?.decode()
+pub fn load_image<P: AsRef<Path>>(path: P) -> Result<DynamicImage, ImageError> {
+    ImageReader::open(path.as_ref())?.decode()
 }
 
 pub fn get_image_vec(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Vec<f32> {
