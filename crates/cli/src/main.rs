@@ -10,8 +10,10 @@ const IMG_WIDTH: u32 = 224;
 const IMG_HEIGHT: u32 = 224;
 
 struct ImageFeature {
-    path: PathBuf,
-    vec: Vec<f32>,
+    path: PathBuf,                 // 画像のパス.
+    vec: Vec<f32>,                 // 画像のベクトル.
+    is_move: bool,                 // 移動先が決まっているか.
+    move_to_path: Option<PathBuf>, // 移動先のパス.
 }
 
 // ディレクトリから画像ファイルを抽出
@@ -95,7 +97,7 @@ fn main() {
     let target_img_paths = get_img_paths(target_dir);
 
     // 画像を全てベクトルに変換する.
-    let base_features: Vec<_> = base_img_paths
+    let mut base_features: Vec<_> = base_img_paths
         .par_iter()
         .map(|path| {
             dbg!(path);
@@ -104,10 +106,12 @@ fn main() {
             ImageFeature {
                 path: path.clone(),
                 vec: vec,
+                is_move: false,
+                move_to_path: None,
             }
         })
         .collect();
-    let target_features: Vec<_> = target_img_paths
+    let mut target_features: Vec<_> = target_img_paths
         .par_iter()
         .map(|path| {
             dbg!(path);
@@ -116,6 +120,8 @@ fn main() {
             ImageFeature {
                 path: path.clone(),
                 vec: vec,
+                is_move: false,
+                move_to_path: None,
             }
         })
         .collect();
@@ -124,51 +130,61 @@ fn main() {
     // 重複画像の移動先は '比較元ディレクトリ/#duplicated' にする.
     let save_dir_path = base_path.join("#duplicated");
 
-    for base_feat in &base_features {
+    // 重複画像のImageFeatureに移動先のパスを追加する.
+    for base_feat in &mut base_features {
         let base_img_path = &base_feat.path;
         // 重複画像を分けるために比較元画像ファイル名でディレクトリを分ける.
         let save_unique_dir = save_dir_path.join(base_img_path.file_stem().unwrap());
         dbg!(&base_img_path);
 
-        for target_feat in &target_features {
+        for target_feat in &mut target_features {
             let target_img_path = &target_feat.path;
             dbg!(&target_img_path);
 
             let result = compare::calc_cosine_similarity(&base_feat.vec, &target_feat.vec);
             dbg!(result);
 
+            // 類似度が閾値を上回る場合.
             if let Some(sim) = result
                 && sim > THRESHOULD
             {
-                // 移動先画像パス.
-                let base_dupl_path = save_unique_dir.join(base_img_path.file_name().unwrap());
-                let target_dupl_path = save_unique_dir.join(target_img_path.file_name().unwrap());
+                target_feat.is_move = true;
+                target_feat.move_to_path =
+                    Some(save_unique_dir.join(target_img_path.file_name().unwrap()));
 
-                match move_file(dbg!(&target_img_path), dbg!(&target_dupl_path)) {
-                    Err(e) => {
-                        dbg!(e);
-                        continue;
-                    }
-                    Ok(_) => {
-                        println!(
-                            "Move {} is completed successfully.",
-                            target_img_path.to_str().unwrap()
-                        );
-                    }
+                if !base_feat.is_move {
+                    base_feat.is_move = true;
+                    target_feat.move_to_path =
+                        Some(save_unique_dir.join(base_img_path.file_name().unwrap()));
                 }
-                match move_file(dbg!(&base_img_path), dbg!(&base_dupl_path)) {
-                    Err(e) => {
-                        dbg!(e);
-                        continue;
-                    }
-                    Ok(_) => {
-                        println!(
-                            "Move {} is completed successfully.",
-                            base_img_path.to_str().unwrap()
-                        );
-                    }
-                }
+
+                // match move_file(dbg!(&target_img_path), dbg!(&target_dupl_path)) {
+                //     Err(e) => {
+                //         dbg!(e);
+                //         continue;
+                //     }
+                //     Ok(_) => {
+                //         println!(
+                //             "Move {} is completed successfully.",
+                //             target_img_path.to_str().unwrap()
+                //         );
+                //     }
+                // }
+                // match move_file(dbg!(&base_img_path), dbg!(&base_dupl_path)) {
+                //     Err(e) => {
+                //         dbg!(e);
+                //         continue;
+                //     }
+                //     Ok(_) => {
+                //         println!(
+                //             "Move {} is completed successfully.",
+                //             base_img_path.to_str().unwrap()
+                //         );
+                //     }
+                // }
             }
         }
     }
+
+    // TODO: base_featuresとtarget_featuresからis_moveフラグが立っている画像を移動する.
 }
