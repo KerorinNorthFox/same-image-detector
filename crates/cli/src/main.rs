@@ -157,34 +157,47 @@ fn main() {
                     target_feat.move_to_path =
                         Some(save_unique_dir.join(base_img_path.file_name().unwrap()));
                 }
-
-                // match move_file(dbg!(&target_img_path), dbg!(&target_dupl_path)) {
-                //     Err(e) => {
-                //         dbg!(e);
-                //         continue;
-                //     }
-                //     Ok(_) => {
-                //         println!(
-                //             "Move {} is completed successfully.",
-                //             target_img_path.to_str().unwrap()
-                //         );
-                //     }
-                // }
-                // match move_file(dbg!(&base_img_path), dbg!(&base_dupl_path)) {
-                //     Err(e) => {
-                //         dbg!(e);
-                //         continue;
-                //     }
-                //     Ok(_) => {
-                //         println!(
-                //             "Move {} is completed successfully.",
-                //             base_img_path.to_str().unwrap()
-                //         );
-                //     }
-                // }
             }
         }
     }
 
     // TODO: base_featuresとtarget_featuresからis_moveフラグが立っている画像を移動する.
+    base_features.par_iter().for_each(|feat| {
+        if !feat.is_move {
+            return;
+        }
+
+        if let Some(move_to_path) = &feat.move_to_path {
+            match move_file(dbg!(&feat.path), dbg!(&move_to_path)) {
+                Err(e) => {
+                    dbg!(e);
+                }
+                Ok(_) => {
+                    println!(
+                        "Move {} is completed successfully.",
+                        feat.path.to_str().unwrap()
+                    );
+                }
+            }
+        }
+    });
+    target_features.par_iter().for_each(|feat| {
+        if !feat.is_move {
+            return;
+        }
+
+        if let Some(move_to_path) = &feat.move_to_path {
+            match move_file(dbg!(&feat.path), dbg!(&move_to_path)) {
+                Err(e) => {
+                    dbg!(e);
+                }
+                Ok(_) => {
+                    println!(
+                        "Move {} is completed successfully.",
+                        feat.path.to_str().unwrap()
+                    );
+                }
+            }
+        }
+    });
 }
