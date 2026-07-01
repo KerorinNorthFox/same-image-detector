@@ -1,5 +1,6 @@
 use clap::{Arg, Command};
 use compare;
+use ort::ep;
 use ort::session::Session;
 use rayon::ThreadPoolBuilder;
 use rayon::prelude::*;
@@ -122,6 +123,8 @@ fn main() {
             // 各スレッドごとにortのsessionを用意し使いまわす.
             || {
                 Session::builder()
+                    .unwrap()
+                    .with_execution_providers([ep::CUDA::default().build()])
                     .unwrap()
                     .with_intra_threads(1) // session内部のスレッドは1つだけ.
                     .unwrap()
