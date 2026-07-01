@@ -1,6 +1,7 @@
 use clap::{Arg, Command};
 use compare;
 use ort::ep;
+use ort::ep::ExecutionProvider;
 use ort::session::Session;
 use rayon::ThreadPoolBuilder;
 use rayon::prelude::*;
@@ -10,7 +11,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 const THRESHOULD: f32 = 0.8;
-const MODEL_NAME: &str = "model/dinov2_vitb14_feature.onnx";
+const MODEL_NAME: &str = "model/resnet50_feature.onnx";
 
 struct ImageFeature {
     vec: Vec<f32>,                 // 画像のベクトル.
@@ -119,6 +120,8 @@ fn main() {
         .num_threads(dbg!(threads.max(1))) // 最低でも1つのスレッドを使用.
         .build_global()
         .unwrap();
+    let cuda = ep::CUDA::default();
+    dbg!(cuda.is_available().unwrap());
 
     // 画像を全てベクトルに変換する.
     let mut base_features: HashMap<PathBuf, ImageFeature> = base_img_paths
