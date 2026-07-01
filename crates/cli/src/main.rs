@@ -1,6 +1,7 @@
 use clap::{Arg, Command};
 use compare;
 use ort::session::Session;
+use rayon::ThreadPoolBuilder;
 use rayon::prelude::*;
 use std::fs;
 use std::io;
@@ -103,6 +104,16 @@ fn main() {
         .unwrap()
         .to_path_buf();
     let model_path = exe_path.join(MODEL_NAME);
+
+    // スレッド数-2でrayonのスレッドプールをセットアップする.
+    let threads = std::thread::available_parallelism()
+        .unwrap()
+        .get()
+        .saturating_sub(2);
+    ThreadPoolBuilder::new()
+        .num_threads(threads.max(1)) // 最低でも1つのスレッドを使用.
+        .build_global()
+        .unwrap();
 
     // 画像を全てベクトルに変換する.
     let mut base_features: Vec<_> = base_img_paths
