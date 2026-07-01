@@ -47,7 +47,7 @@ fn move_file(from: &Path, to: &Path) -> io::Result<()> {
     let parent = to.parent().unwrap();
     if !parent.exists() {
         fs::create_dir_all(parent)?;
-        println!("create dir '{}' successfully.", parent.to_str().unwrap());
+        println!("Created dir '{}' successfully.", parent.to_str().unwrap());
     }
 
     fs::rename(&from, &to)?;
@@ -108,14 +108,15 @@ fn main() {
     if cfg!(debug_assertions) {
         model_path = Path::new(MODEL_NAME).to_path_buf();
     }
+    dbg!(&model_path);
 
     // スレッド数-2でrayonのスレッドプールをセットアップする.
-    let threads = std::thread::available_parallelism()
+    let threads = dbg!(std::thread::available_parallelism())
         .unwrap()
         .get()
         .saturating_sub(2);
     ThreadPoolBuilder::new()
-        .num_threads(threads.max(1)) // 最低でも1つのスレッドを使用.
+        .num_threads(dbg!(threads.max(1))) // 最低でも1つのスレッドを使用.
         .build_global()
         .unwrap();
 
@@ -173,7 +174,7 @@ fn main() {
             },
         )
         .collect();
-    dbg!("Image conversion is completed.");
+    println!("Image conversion is completed.");
 
     // 重複画像の移動先は '比較元ディレクトリ/#duplicated' にする.
     let save_dir_path = base_path.join("#duplicated");
@@ -183,14 +184,33 @@ fn main() {
         let base_img_path = &base_feat.path;
         // 重複画像を分けるために比較元画像ファイル名でディレクトリを分ける.
         let save_unique_dir = save_dir_path.join(base_img_path.file_stem().unwrap());
-        dbg!(&base_img_path);
 
         for target_feat in &mut target_features {
             let target_img_path = &target_feat.path;
-            dbg!(&target_img_path);
+
+            // 同じファイルの時はスキップ.
+            if base_img_path == target_img_path {
+                println!(
+                    "{} == {}.",
+                    base_img_path.display(),
+                    target_img_path.display()
+                );
+                continue;
+            }
+
+            // targetのis_moveフラグが既に立っている場合スキップ.
+            if target_feat.is_move {
+                println!("'{}' is already flagd is_move.", target_img_path.display());
+                continue;
+            }
 
             let result = compare::calc_cosine_similarity(&base_feat.vec, &target_feat.vec);
-            dbg!(result);
+            println!(
+                "{} <-> {} = {:?}",
+                base_img_path.display(),
+                target_img_path.display(),
+                result
+            );
 
             // 類似度が閾値を上回る場合.
             if let Some(sim) = result
@@ -211,7 +231,7 @@ fn main() {
     }
 
     base_features.par_iter().for_each(|feat| {
-        if !feat.is_move {
+        if !dbg!(feat.is_move) {
             return;
         }
 
@@ -221,16 +241,13 @@ fn main() {
                     dbg!(e);
                 }
                 Ok(_) => {
-                    println!(
-                        "Move {} is completed successfully.",
-                        feat.path.to_str().unwrap()
-                    );
+                    println!("'{}' is moved successfully.", feat.path.to_str().unwrap());
                 }
             }
         }
     });
     target_features.par_iter().for_each(|feat| {
-        if !feat.is_move {
+        if !dbg!(feat.is_move) {
             return;
         }
 
@@ -240,10 +257,7 @@ fn main() {
                     dbg!(e);
                 }
                 Ok(_) => {
-                    println!(
-                        "Move {} is completed successfully.",
-                        feat.path.to_str().unwrap()
-                    );
+                    println!("'{}' is moved successfully.", feat.path.to_str().unwrap());
                 }
             }
         }
