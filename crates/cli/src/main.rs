@@ -5,7 +5,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-const THRESHOULD: f32 = 0.95;
+const THRESHOULD: f32 = 0.8;
 
 struct ImageFeature {
     path: PathBuf,                 // 画像のパス.
