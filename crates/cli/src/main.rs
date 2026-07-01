@@ -4,6 +4,7 @@ use ort::ep;
 use ort::session::Session;
 use rayon::ThreadPoolBuilder;
 use rayon::prelude::*;
+use std::collections::HashMap;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -12,7 +13,6 @@ const THRESHOULD: f32 = 0.8;
 const MODEL_NAME: &str = "model/dinov2_vitb14_feature.onnx";
 
 struct ImageFeature {
-    path: PathBuf,                 // 画像のパス.
     vec: Vec<f32>,                 // 画像のベクトル.
     is_move: bool,                 // 移動先が決まっているか.
     move_to_path: Option<PathBuf>, // 移動先のパス.
@@ -114,14 +114,14 @@ fn main() {
     let threads = dbg!(std::thread::available_parallelism())
         .unwrap()
         .get()
-        .saturating_sub(2);
+        .saturating_sub(4);
     ThreadPoolBuilder::new()
         .num_threads(dbg!(threads.max(1))) // 最低でも1つのスレッドを使用.
         .build_global()
         .unwrap();
 
     // 画像を全てベクトルに変換する.
-    let mut base_features: Vec<_> = base_img_paths
+    let mut base_features: HashMap<PathBuf, ImageFeature> = base_img_paths
         .par_iter()
         .map_init(
             // 各スレッドごとにortのsessionを用意し使いまわす.
@@ -140,16 +140,16 @@ fn main() {
                     .expect(&format!("Failed to load image '{}'.", path.display()));
                 let vec = compare::preprocess(&img);
                 let est_vec = compare::estimate(session, vec);
-                ImageFeature {
-                    path: dbg!(path.clone()),
+                let feature = ImageFeature {
                     vec: est_vec,
                     is_move: false,
                     move_to_path: None,
-                }
+                };
+                (dbg!(path.clone()), feature)
             },
         )
         .collect();
-    let mut target_features: Vec<_> = target_img_paths
+    let mut target_features: HashMap<PathBuf, ImageFeature> = target_img_paths
         .par_iter()
         .map_init(
             || {
@@ -165,12 +165,12 @@ fn main() {
                     .expect(&format!("Failed to load image '{}'.", path.display()));
                 let vec = compare::preprocess(&img);
                 let est_vec = compare::estimate(session, vec);
-                ImageFeature {
-                    path: dbg!(path.clone()),
+                let feature = ImageFeature {
                     vec: est_vec,
                     is_move: false,
                     move_to_path: None,
-                }
+                };
+                (dbg!(path.clone()), feature)
             },
         )
         .collect();
@@ -180,14 +180,20 @@ fn main() {
     let save_dir_path = base_path.join("#duplicated");
 
     // 重複画像のImageFeatureに移動先のパスを追加する.
-    for base_feat in &mut base_features {
-        let base_img_path = &base_feat.path;
+    for (base_img_path, base_feat) in &mut base_features {
         // 重複画像を分けるために比較元画像ファイル名でディレクトリを分ける.
         let save_unique_dir = save_dir_path.join(base_img_path.file_stem().unwrap());
 
-        for target_feat in &mut target_features {
-            let target_img_path = &target_feat.path;
+        // targetの方で既にis_moveフラグが立っているbaseはスキップ.
+        if target_features.get(base_img_path).unwrap().is_move {
+            println!(
+                "'{}' is already flaged is_move on target_feat.",
+                base_img_path.display()
+            );
+            continue;
+        }
 
+        for (target_img_path, target_feat) in &mut target_features {
             // 同じファイルの時はスキップ.
             if base_img_path == target_img_path {
                 println!(
@@ -200,7 +206,7 @@ fn main() {
 
             // targetのis_moveフラグが既に立っている場合スキップ.
             if target_feat.is_move {
-                println!("'{}' is already flagd is_move.", target_img_path.display());
+                println!("'{}' is already flaged is_move.", target_img_path.display());
                 continue;
             }
 
@@ -230,34 +236,34 @@ fn main() {
         }
     }
 
-    base_features.par_iter().for_each(|feat| {
+    base_features.iter().for_each(|(path, feat)| {
         if !dbg!(feat.is_move) {
             return;
         }
 
         if let Some(move_to_path) = &feat.move_to_path {
-            match move_file(dbg!(&feat.path), dbg!(&move_to_path)) {
+            match move_file(dbg!(&path), dbg!(&move_to_path)) {
                 Err(e) => {
                     dbg!(e);
                 }
                 Ok(_) => {
-                    println!("'{}' is moved successfully.", feat.path.to_str().unwrap());
+                    println!("'{}' is moved successfully.", path.to_str().unwrap());
                 }
             }
         }
     });
-    target_features.par_iter().for_each(|feat| {
+    target_features.iter().for_each(|(path, feat)| {
         if !dbg!(feat.is_move) {
             return;
         }
 
         if let Some(move_to_path) = &feat.move_to_path {
-            match move_file(dbg!(&feat.path), dbg!(&move_to_path)) {
+            match move_file(dbg!(&path), dbg!(&move_to_path)) {
                 Err(e) => {
                     dbg!(e);
                 }
                 Ok(_) => {
-                    println!("'{}' is moved successfully.", feat.path.to_str().unwrap());
+                    println!("'{}' is moved successfully.", path.to_str().unwrap());
                 }
             }
         }
