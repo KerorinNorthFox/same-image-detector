@@ -6,8 +6,6 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 const THRESHOULD: f32 = 0.95;
-const IMG_WIDTH: u32 = 224;
-const IMG_HEIGHT: u32 = 224;
 
 struct ImageFeature {
     path: PathBuf,                 // 画像のパス.
@@ -102,10 +100,11 @@ fn main() {
         .map(|path| {
             let img =
                 compare::load_image(path).expect(&format!("'{}' failed to load.", path.display()));
-            let vec = compare::get_image_vec(&img, Some(IMG_WIDTH), Some(IMG_HEIGHT));
+            let vec = compare::preprocess(&img);
+            let est_vec = compare::estimate(vec);
             ImageFeature {
                 path: dbg!(path.clone()),
-                vec: vec,
+                vec: est_vec,
                 is_move: false,
                 move_to_path: None,
             }
@@ -116,10 +115,11 @@ fn main() {
         .map(|path| {
             let img =
                 compare::load_image(path).expect(&format!("'{}' failed to load.", path.display()));
-            let vec = compare::get_image_vec(&img, Some(IMG_WIDTH), Some(IMG_HEIGHT));
+            let vec = compare::preprocess(&img);
+            let est_vec = compare::estimate(vec);
             ImageFeature {
                 path: dbg!(path.clone()),
-                vec: vec,
+                vec: est_vec,
                 is_move: false,
                 move_to_path: None,
             }

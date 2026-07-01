@@ -1,26 +1,64 @@
 use image::imageops::FilterType;
 use image::{DynamicImage, ImageError, ImageReader};
+use ndarray::Array4;
+use ort::{session::Session, value::TensorRef};
 use std::path::Path;
 
-const NORMALIZED: f32 = 1.0 / 255.0;
+const IMG_WIDTH_ONNX_INPUT: usize = 224;
+const IMG_HEIGHT_ONNX_INPUT: usize = 224;
+const RGB_CHANNEL: usize = 3;
+const MEAN: [f32; 3] = [0.485, 0.456, 0.406];
+const STD: [f32; 3] = [0.229, 0.224, 0.225];
 
 pub fn load_image<P: AsRef<Path>>(path: P) -> Result<DynamicImage, ImageError> {
     ImageReader::open(path.as_ref())?.decode()
 }
 
-pub fn get_image_vec(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Vec<f32> {
-    let width = width.unwrap_or(256);
-    let height = height.unwrap_or(256);
-    let resized = img.resize_exact(width, height, FilterType::Nearest);
-    let rgb = resized.to_rgb8();
-    let raw = rgb.as_raw();
+pub fn preprocess(img: &DynamicImage) -> Vec<f32> {
+    let img = img
+        .resize_exact(
+            IMG_WIDTH_ONNX_INPUT as u32,
+            IMG_HEIGHT_ONNX_INPUT as u32,
+            FilterType::Triangle,
+        )
+        .to_rgb8();
 
-    let mut vec = vec![0.0; raw.len()];
+    let mut tensor = vec![0f32; RGB_CHANNEL * IMG_WIDTH_ONNX_INPUT * IMG_HEIGHT_ONNX_INPUT];
 
-    for (dst, src) in vec.iter_mut().zip(raw) {
-        *dst = *src as f32 * NORMALIZED;
+    for y in 0..IMG_HEIGHT_ONNX_INPUT {
+        for x in 0..IMG_WIDTH_ONNX_INPUT {
+            let p = img.get_pixel(x as u32, y as u32);
+            for c in 0..RGB_CHANNEL {
+                let mut v = p[c] as f32 / 255.0;
+                v = (v - MEAN[c]) / STD[c];
+
+                tensor[c * IMG_WIDTH_ONNX_INPUT * IMG_HEIGHT_ONNX_INPUT
+                    + y * IMG_WIDTH_ONNX_INPUT
+                    + x] = v;
+            }
+        }
     }
-    vec
+
+    tensor
+}
+
+pub fn estimate(input: Vec<f32>) -> Vec<f32> {
+    let input = Array4::from_shape_vec(
+        (1, RGB_CHANNEL, IMG_WIDTH_ONNX_INPUT, IMG_HEIGHT_ONNX_INPUT),
+        input,
+    )
+    .unwrap();
+    let mut session = Session::builder()
+        .unwrap()
+        .commit_from_file("model/resnet50_feature.onnx")
+        .unwrap();
+
+    let outputs = session
+        .run(ort::inputs![TensorRef::from_array_view(&input).unwrap()])
+        .unwrap();
+
+    let (_shape, feature) = outputs[0].try_extract_tensor::<f32>().unwrap();
+    feature.to_vec()
 }
 
 pub fn calc_cosine_similarity(v1: &[f32], v2: &[f32]) -> Option<f32> {
