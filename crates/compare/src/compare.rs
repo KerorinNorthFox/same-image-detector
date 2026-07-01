@@ -1,26 +1,54 @@
 use image::imageops::FilterType;
-use image::{DynamicImage, ImageError, ImageReader};
+use image::{DynamicImage, GenericImageView, ImageError, ImageReader};
 use std::path::Path;
-
-const NORMALIZED: f32 = 1.0 / 255.0;
 
 pub fn load_image<P: AsRef<Path>>(path: P) -> Result<DynamicImage, ImageError> {
     ImageReader::open(path.as_ref())?.decode()
 }
 
-pub fn get_image_vec(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Vec<f32> {
+pub fn get_hash(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> usize {
     let width = width.unwrap_or(256);
     let height = height.unwrap_or(256);
-    let resized = img.resize_exact(width, height, FilterType::Nearest);
-    let rgb = resized.to_rgb8();
-    let raw = rgb.as_raw();
+    let grayscale = img
+        .resize_exact(width, height, FilterType::Lanczos3)
+        .grayscale();
 
-    let mut vec = vec![0.0; raw.len()];
+    let mut sum_pixels: usize = 0;
+    let mut pixels: Vec<usize> = Vec::new();
 
-    for (dst, src) in vec.iter_mut().zip(raw) {
-        *dst = *src as f32 * NORMALIZED;
+    for (_x, _y, pixel) in grayscale.pixels() {
+        let red = pixel[0];
+        sum_pixels += red as usize;
+        pixels.push(red as usize);
     }
-    vec
+
+    let (width, height) = grayscale.dimensions();
+
+    // 画素値の平均値を取得
+    let ave = (sum_pixels as f64) / (f64::from(width) * f64::from(height));
+
+    let mut hash: usize = 0;
+    let mut one: usize = 1;
+
+    // Average hash の計算
+    for pixel in pixels {
+        if pixel as f64 > ave {
+            hash |= one;
+        }
+        one <<= 1
+    }
+    hash
+}
+
+pub fn calc_distance(hash_from: usize, hash_to: usize) -> i32 {
+    let mut d = 0;
+    for i in 0..64 {
+        let k = 1 << i;
+        if (hash_from & k) != (hash_to & k) {
+            d += 1
+        }
+    }
+    d
 }
 
 pub fn calc_cosine_similarity(v1: &[f32], v2: &[f32]) -> Option<f32> {

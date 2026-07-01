@@ -5,13 +5,13 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-const THRESHOULD: f32 = 0.95;
-const IMG_WIDTH: u32 = 224;
-const IMG_HEIGHT: u32 = 224;
+const THRESHOULD: i32 = 8;
+const IMG_WIDTH: u32 = 10;
+const IMG_HEIGHT: u32 = 10;
 
 struct ImageFeature {
     path: PathBuf,                 // 画像のパス.
-    vec: Vec<f32>,                 // 画像のベクトル.
+    hash: usize,                   // 画像のハッシュ.
     is_move: bool,                 // 移動先が決まっているか.
     move_to_path: Option<PathBuf>, // 移動先のパス.
 }
@@ -102,10 +102,10 @@ fn main() {
         .map(|path| {
             let img =
                 compare::load_image(path).expect(&format!("'{}' failed to load.", path.display()));
-            let vec = compare::get_image_vec(&img, Some(IMG_WIDTH), Some(IMG_HEIGHT));
+            let hash = compare::get_hash(&img, Some(IMG_WIDTH), Some(IMG_HEIGHT));
             ImageFeature {
                 path: dbg!(path.clone()),
-                vec: vec,
+                hash: hash,
                 is_move: false,
                 move_to_path: None,
             }
@@ -116,10 +116,10 @@ fn main() {
         .map(|path| {
             let img =
                 compare::load_image(path).expect(&format!("'{}' failed to load.", path.display()));
-            let vec = compare::get_image_vec(&img, Some(IMG_WIDTH), Some(IMG_HEIGHT));
+            let hash = compare::get_hash(&img, Some(IMG_WIDTH), Some(IMG_HEIGHT));
             ImageFeature {
                 path: dbg!(path.clone()),
-                vec: vec,
+                hash: hash,
                 is_move: false,
                 move_to_path: None,
             }
@@ -141,13 +141,11 @@ fn main() {
             let target_img_path = &target_feat.path;
             dbg!(&target_img_path);
 
-            let result = compare::calc_cosine_similarity(&base_feat.vec, &target_feat.vec);
-            dbg!(result);
+            let sim = compare::calc_distance(base_feat.hash, target_feat.hash);
+            dbg!(sim);
 
-            // 類似度が閾値を上回る場合.
-            if let Some(sim) = result
-                && sim > THRESHOULD
-            {
+            // 類似度が閾値を下回る場合.
+            if sim < THRESHOULD {
                 println!("These images is similar.");
                 target_feat.is_move = true;
                 target_feat.move_to_path =
