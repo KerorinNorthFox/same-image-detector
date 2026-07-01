@@ -100,11 +100,11 @@ fn main() {
     let mut base_features: Vec<_> = base_img_paths
         .par_iter()
         .map(|path| {
-            dbg!(path);
-            let img = compare::load_image(path).unwrap();
+            let img =
+                compare::load_image(path).expect(&format!("'{}' failed to load.", path.display()));
             let vec = compare::get_image_vec(&img, Some(IMG_WIDTH), Some(IMG_HEIGHT));
             ImageFeature {
-                path: path.clone(),
+                path: dbg!(path.clone()),
                 vec: vec,
                 is_move: false,
                 move_to_path: None,
@@ -114,11 +114,11 @@ fn main() {
     let mut target_features: Vec<_> = target_img_paths
         .par_iter()
         .map(|path| {
-            dbg!(path);
-            let img = compare::load_image(path).unwrap();
+            let img =
+                compare::load_image(path).expect(&format!("'{}' failed to load.", path.display()));
             let vec = compare::get_image_vec(&img, Some(IMG_WIDTH), Some(IMG_HEIGHT));
             ImageFeature {
-                path: path.clone(),
+                path: dbg!(path.clone()),
                 vec: vec,
                 is_move: false,
                 move_to_path: None,
@@ -148,20 +148,20 @@ fn main() {
             if let Some(sim) = result
                 && sim > THRESHOULD
             {
+                println!("These images is similar.");
                 target_feat.is_move = true;
                 target_feat.move_to_path =
                     Some(save_unique_dir.join(target_img_path.file_name().unwrap()));
 
                 if !base_feat.is_move {
                     base_feat.is_move = true;
-                    target_feat.move_to_path =
+                    base_feat.move_to_path =
                         Some(save_unique_dir.join(base_img_path.file_name().unwrap()));
                 }
             }
         }
     }
 
-    // TODO: base_featuresとtarget_featuresからis_moveフラグが立っている画像を移動する.
     base_features.par_iter().for_each(|feat| {
         if !feat.is_move {
             return;
