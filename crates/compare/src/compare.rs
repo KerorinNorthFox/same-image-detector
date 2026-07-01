@@ -42,7 +42,7 @@ pub fn preprocess(img: &DynamicImage) -> Vec<f32> {
     tensor
 }
 
-pub fn estimate(input: Vec<f32>) -> Vec<f32> {
+pub fn estimate(input: Vec<f32>, model_path: &Path) -> Vec<f32> {
     let input = Array4::from_shape_vec(
         (1, RGB_CHANNEL, IMG_WIDTH_ONNX_INPUT, IMG_HEIGHT_ONNX_INPUT),
         input,
@@ -50,7 +50,7 @@ pub fn estimate(input: Vec<f32>) -> Vec<f32> {
     .unwrap();
     let mut session = Session::builder()
         .unwrap()
-        .commit_from_file("model/resnet50_feature.onnx")
+        .commit_from_file(model_path)
         .unwrap();
 
     let outputs = session

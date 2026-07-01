@@ -6,6 +6,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 const THRESHOULD: f32 = 0.8;
+const MODEL_NAME: &str = "model/dinov2_vitb14_feature.onnx";
 
 struct ImageFeature {
     path: PathBuf,                 // 画像のパス.
@@ -94,6 +95,13 @@ fn main() {
     let base_img_paths = get_img_paths(base_dir);
     let target_img_paths = get_img_paths(target_dir);
 
+    let exe_path = std::env::current_exe()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf();
+    let model_path = exe_path.join(MODEL_NAME);
+
     // 画像を全てベクトルに変換する.
     let mut base_features: Vec<_> = base_img_paths
         .par_iter()
@@ -101,7 +109,7 @@ fn main() {
             let img =
                 compare::load_image(path).expect(&format!("'{}' failed to load.", path.display()));
             let vec = compare::preprocess(&img);
-            let est_vec = compare::estimate(vec);
+            let est_vec = compare::estimate(vec, &model_path);
             ImageFeature {
                 path: dbg!(path.clone()),
                 vec: est_vec,
@@ -116,7 +124,7 @@ fn main() {
             let img =
                 compare::load_image(path).expect(&format!("'{}' failed to load.", path.display()));
             let vec = compare::preprocess(&img);
-            let est_vec = compare::estimate(vec);
+            let est_vec = compare::estimate(vec, &model_path);
             ImageFeature {
                 path: dbg!(path.clone()),
                 vec: est_vec,
