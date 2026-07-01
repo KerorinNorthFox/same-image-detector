@@ -104,7 +104,10 @@ fn main() {
         .parent()
         .unwrap()
         .to_path_buf();
-    let model_path = exe_path.join(MODEL_NAME);
+    let mut model_path = exe_path.join(MODEL_NAME);
+    if cfg!(debug_assertions) {
+        model_path = Path::new(MODEL_NAME).to_path_buf();
+    }
 
     // スレッド数-2でrayonのスレッドプールをセットアップする.
     let threads = std::thread::available_parallelism()
