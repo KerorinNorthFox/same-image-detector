@@ -1,5 +1,6 @@
 use clap::{Arg, Command};
 use compare;
+use ort::session::Session;
 use rayon::prelude::*;
 use std::fs;
 use std::io;
@@ -95,6 +96,7 @@ fn main() {
     let base_img_paths = get_img_paths(base_dir);
     let target_img_paths = get_img_paths(target_dir);
 
+    // バイナリからの相対的なモデルパス.
     let exe_path = std::env::current_exe()
         .unwrap()
         .parent()
@@ -105,33 +107,54 @@ fn main() {
     // 画像を全てベクトルに変換する.
     let mut base_features: Vec<_> = base_img_paths
         .par_iter()
-        .map(|path| {
-            let img =
-                compare::load_image(path).expect(&format!("'{}' failed to load.", path.display()));
-            let vec = compare::preprocess(&img);
-            let est_vec = compare::estimate(vec, &model_path);
-            ImageFeature {
-                path: dbg!(path.clone()),
-                vec: est_vec,
-                is_move: false,
-                move_to_path: None,
-            }
-        })
+        .map_init(
+            // 各スレッドごとにortのsessionを用意し使いまわす.
+            || {
+                Session::builder()
+                    .unwrap()
+                    .with_intra_threads(1) // session内部のスレッドは1つだけ.
+                    .unwrap()
+                    .commit_from_file(&model_path)
+                    .expect(&format!("Failed to load model '{}'.", model_path.display()))
+            },
+            |session, path| {
+                let img = compare::load_image(path)
+                    .expect(&format!("Failed to load image '{}'.", path.display()));
+                let vec = compare::preprocess(&img);
+                let est_vec = compare::estimate(session, vec);
+                ImageFeature {
+                    path: dbg!(path.clone()),
+                    vec: est_vec,
+                    is_move: false,
+                    move_to_path: None,
+                }
+            },
+        )
         .collect();
     let mut target_features: Vec<_> = target_img_paths
         .par_iter()
-        .map(|path| {
-            let img =
-                compare::load_image(path).expect(&format!("'{}' failed to load.", path.display()));
-            let vec = compare::preprocess(&img);
-            let est_vec = compare::estimate(vec, &model_path);
-            ImageFeature {
-                path: dbg!(path.clone()),
-                vec: est_vec,
-                is_move: false,
-                move_to_path: None,
-            }
-        })
+        .map_init(
+            || {
+                Session::builder()
+                    .unwrap()
+                    .with_intra_threads(1)
+                    .unwrap()
+                    .commit_from_file(&model_path)
+                    .expect(&format!("Failed to load model '{}'.", model_path.display()))
+            },
+            |session, path| {
+                let img = compare::load_image(path)
+                    .expect(&format!("Failed to load image '{}'.", path.display()));
+                let vec = compare::preprocess(&img);
+                let est_vec = compare::estimate(session, vec);
+                ImageFeature {
+                    path: dbg!(path.clone()),
+                    vec: est_vec,
+                    is_move: false,
+                    move_to_path: None,
+                }
+            },
+        )
         .collect();
     dbg!("Image conversion is completed.");
 
